@@ -6,6 +6,10 @@ const PORT_KEY = "multitool-port";
 let toolsReady = false;
 let lookedUpUrl = "";
 let working = false;
+let helperConnected = false;
+let helperAttempt = 0;
+let helperWatch = 0;
+let helperQuietTicks = 0;
 
 function sha256Hex(text) {
     const bytes = new TextEncoder().encode(text);
@@ -152,6 +156,7 @@ function setupGate() {
 
     document.querySelector("#lock").addEventListener("click", () => {
         sessionStorage.removeItem(SESSION_KEY);
+        stopHelperWatch();
         document.querySelector("#password").value = "";
         document.querySelector("#tools").hidden = true;
         document.querySelector("#gate").hidden = false;
@@ -167,7 +172,7 @@ function openTools() {
         setupVideo();
         setupQr();
     }
-    checkHelper();
+    watchHelper();
 }
 
 function currentPort() {
@@ -212,21 +217,59 @@ function setHelperStatus(text, isError) {
     status.className = isError ? "error" : "status";
 }
 
+function watchHelper() {
+    checkHelper();
+    if (helperWatch) return;
+    helperWatch = setInterval(() => {
+        if (document.querySelector("#tools").hidden) return;
+        if (helperConnected) {
+            helperQuietTicks += 1;
+            if (helperQuietTicks < 8) return;
+        }
+        helperQuietTicks = 0;
+        checkHelper();
+    }, 4000);
+    document.addEventListener("visibilitychange", checkWhenVisible);
+}
+
+function stopHelperWatch() {
+    if (helperWatch) clearInterval(helperWatch);
+    helperWatch = 0;
+    helperConnected = false;
+    helperQuietTicks = 0;
+    document.removeEventListener("visibilitychange", checkWhenVisible);
+}
+
+function checkWhenVisible() {
+    if (document.visibilityState !== "visible") return;
+    if (document.querySelector("#tools").hidden) return;
+    helperQuietTicks = 0;
+    checkHelper();
+}
+
 async function checkHelper() {
+    const attempt = ++helperAttempt;
     try {
         const response = await helperFetch("/health");
+        if (attempt !== helperAttempt) return;
         if (!response.ok) {
+            helperConnected = false;
             setHelperStatus(await readError(response), true);
             return;
         }
         const data = await response.json();
+        if (attempt !== helperAttempt) return;
         if (!data.ytdlp) {
+            helperConnected = true;
             setHelperStatus("The helper is running, but yt-dlp is not installed. Run python3 -m pip install --user yt-dlp and check again.", true);
             return;
         }
+        helperConnected = true;
         const ffmpegNote = data.ffmpeg ? "" : " ffmpeg is not installed, so a saved video may have no sound.";
         setHelperStatus(`Helper is running (yt-dlp ${data.ytdlp}).${ffmpegNote}`, false);
     } catch (error) {
+        if (attempt !== helperAttempt) return;
+        helperConnected = false;
         setHelperStatus(unreachableMessage(), true);
     }
 }
@@ -351,6 +394,8 @@ function setupVideo() {
         const next = Number.isInteger(port) && port >= 1 && port <= 65535 ? port : 8765;
         portInput.value = String(next);
         localStorage.setItem(PORT_KEY, String(next));
+        helperConnected = false;
+        helperQuietTicks = 0;
         checkHelper();
     });
 
