@@ -12,7 +12,6 @@ let helperWatch = 0;
 let helperQuietTicks = 0;
 let helperPause = false;
 let helperChecking = false;
-let helperStartAsked = false;
 
 function sha256Hex(text) {
     const bytes = new TextEncoder().encode(text);
@@ -196,18 +195,7 @@ function helperAddress(path) {
 }
 
 function unreachableMessage() {
-    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Click Check again. If Windows asks to open Multitool, choose Open. If the browser asks to connect to apps on this device, choose Allow.`;
-}
-
-function askWindowsToStartHelper() {
-    if (helperStartAsked || pageIsLoopback() || location.protocol === "file:") return;
-    helperStartAsked = true;
-    const link = document.createElement("a");
-    link.href = "multitool://start";
-    link.hidden = true;
-    document.body.append(link);
-    link.click();
-    link.remove();
+    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Click Start helper. If Windows asks to open Multitool, choose Open.`;
 }
 
 function pageIsLoopback() {
@@ -226,7 +214,7 @@ async function loopbackPermission() {
 }
 
 function promptMessage() {
-    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Click Check again, and when the browser asks to connect to apps on this device, choose Allow.`;
+    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Click Start helper, and when the browser asks to connect to apps on this device, choose Allow.`;
 }
 
 function deniedMessage() {
@@ -319,7 +307,6 @@ function checkWhenVisible() {
 async function checkHelper() {
     if (helperChecking) return;
     const gesture = !!(navigator.userActivation && navigator.userActivation.isActive);
-    if (gesture) helperStartAsked = false;
     helperChecking = true;
     const attempt = ++helperAttempt;
     try {
@@ -355,36 +342,6 @@ async function checkHelper() {
     } catch (error) {
         if (attempt !== helperAttempt) return;
         helperConnected = false;
-        if (gesture && location.protocol !== "file:") {
-            const state = pageIsLoopback() ? "granted" : await loopbackPermission();
-            if (attempt !== helperAttempt) return;
-            if (state !== "denied") askWindowsToStartHelper();
-            if (state !== "denied" && state !== "prompt") {
-                setHelperStatus("Starting the helper on this computer…", false);
-                for (let wait = 0; wait < 10; wait += 1) {
-                    await new Promise((resolve) => setTimeout(resolve, 500));
-                    if (attempt !== helperAttempt) return;
-                    try {
-                        const retry = await helperFetch("/health");
-                        if (!retry.ok) break;
-                        const data = await retry.json();
-                        if (attempt !== helperAttempt) return;
-                        helperPause = false;
-                        helperConnected = true;
-                        if (!data.ytdlp) {
-                            setHelperStatus("The helper is running, but yt-dlp is not installed. Run python3 -m pip install --user yt-dlp and check again.", true);
-                            return;
-                        }
-                        const ffmpegNote = data.ffmpeg ? "" : " ffmpeg is not installed, so a saved video may have no sound.";
-                        setHelperStatus(`Helper is running (yt-dlp ${data.ytdlp}).${ffmpegNote}`, false);
-                        return;
-                    } catch (retryError) {
-                        continue;
-                    }
-                }
-            }
-        }
-        if (attempt !== helperAttempt) return;
         const status = await failureStatus();
         if (attempt !== helperAttempt) return;
         setHelperStatus(status, true);
@@ -519,6 +476,41 @@ function setupVideo() {
     });
 
     document.querySelector("#recheck").addEventListener("click", checkHelper);
+
+    document.querySelector("#start-helper").addEventListener("click", () => {
+        const attempt = ++helperAttempt;
+        helperConnected = false;
+        helperPause = true;
+        setHelperStatus("Starting the helper on this computer…", false);
+        const firstTry = helperFetch("/health");
+        (async () => {
+            for (let wait = 0; wait < 11; wait += 1) {
+                if (wait > 0) await new Promise((resolve) => setTimeout(resolve, 500));
+                if (attempt !== helperAttempt) return;
+                try {
+                    const retry = wait === 0 ? await firstTry : await helperFetch("/health");
+                    if (!retry.ok) break;
+                    const data = await retry.json();
+                    if (attempt !== helperAttempt) return;
+                    helperPause = false;
+                    helperConnected = true;
+                    if (!data.ytdlp) {
+                        setHelperStatus("The helper is running, but yt-dlp is not installed. Run python3 -m pip install --user yt-dlp and check again.", true);
+                        return;
+                    }
+                    const ffmpegNote = data.ffmpeg ? "" : " ffmpeg is not installed, so a saved video may have no sound.";
+                    setHelperStatus(`Helper is running (yt-dlp ${data.ytdlp}).${ffmpegNote}`, false);
+                    return;
+                } catch (retryError) {
+                    continue;
+                }
+            }
+            if (attempt !== helperAttempt) return;
+            const status = await failureStatus();
+            if (attempt !== helperAttempt) return;
+            setHelperStatus(status, true);
+        })();
+    });
 
     document.querySelector("#lookup-form").addEventListener("submit", async (event) => {
         event.preventDefault();

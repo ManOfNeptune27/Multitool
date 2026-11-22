@@ -93,9 +93,25 @@ button:disabled {
     cursor: not-allowed;
 }
 
-input:focus, textarea:focus, button:focus-visible {
+input:focus, textarea:focus, button:focus-visible, #start-helper:focus-visible {
     outline: 2px solid var(--ice-blue);
     outline-offset: 2px;
+}
+
+#start-helper {
+    display: inline-block;
+    color: var(--snow-white);
+    background-color: var(--navy);
+    background-image: linear-gradient(to bottom, var(--panel), #0f7a46);
+    border: 2px solid var(--electric-blue);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#start-helper:hover {
+    border-color: var(--ice-blue);
 }
 
 .row {
