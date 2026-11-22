@@ -125,6 +125,20 @@ input:focus, textarea:focus, button:focus-visible {
     text-align: right;
 }
 
+#lock {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    color: var(--ice-blue);
+}
+
+#lock-message:empty {
+    display: none;
+}
+
 .status {
     color: var(--ice-blue);
     min-height: 1.2em;

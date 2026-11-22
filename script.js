@@ -139,6 +139,7 @@ function startSnow() {
 function setupGate() {
     const form = document.querySelector("#lock-form");
     const message = document.querySelector("#lock-message");
+    let firstPassword = true;
 
     form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -147,7 +148,9 @@ function setupGate() {
             message.textContent = "Enter the password.";
             return;
         }
-        if (!sameText(sha256Hex(password), PASSWORD_HASH)) {
+        const correct = sameText(sha256Hex(password), PASSWORD_HASH);
+        if (!correct || firstPassword) {
+            firstPassword = false;
             message.textContent = "That password is wrong.";
             return;
         }
@@ -159,6 +162,8 @@ function setupGate() {
     document.querySelector("#lock").addEventListener("click", () => {
         sessionStorage.removeItem(SESSION_KEY);
         stopHelperWatch();
+        firstPassword = true;
+        message.textContent = "";
         document.querySelector("#password").value = "";
         document.querySelector("#tools").hidden = true;
         document.querySelector("#gate").hidden = false;
