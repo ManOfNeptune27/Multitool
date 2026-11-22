@@ -1,5 +1,5 @@
 @echo off
-set "ROOT=\\wsl.localhost\Ubuntu\home\manofneptune2792\Projects\Multitool\Multitool"
+set "ROOT=\\wsl.localhost\Ubuntu\home\manofneptune2792\Projects\Multitool"
 set /a TRIES=0
 
 :waitpath
