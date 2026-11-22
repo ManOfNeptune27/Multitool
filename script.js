@@ -1,5 +1,5 @@
 // Change this with: python3 set_password.py
-const PASSWORD_HASH = "6c1160b213e19ad1aeeeccde97d2257287604881169055c3c19975a821d3d9a1";
+const PASSWORD_HASH = "a14aadfc0d2aec5e8af2c902b76dd0c4a37463f718b8767b7ae9a2cc990e3200";
 const SESSION_KEY = "multitool-open";
 const PORT_KEY = "multitool-port";
 
@@ -10,6 +10,8 @@ let helperConnected = false;
 let helperAttempt = 0;
 let helperWatch = 0;
 let helperQuietTicks = 0;
+let helperPause = false;
+let helperChecking = false;
 
 function sha256Hex(text) {
     const bytes = new TextEncoder().encode(text);
@@ -187,17 +189,55 @@ function helperAddress(path) {
 }
 
 function unreachableMessage() {
-    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Start helper/server.py on this computer, the same one as this browser, and leave that window open. If the browser asks to see devices on your local network, choose Allow.`;
+    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Start helper/server.py on this computer, the same one as this browser, and leave that window open. If the browser asks to connect to apps on this device, choose Allow.`;
+}
+
+function pageIsLoopback() {
+    const host = location.hostname.replace(/^\[|\]$/g, "");
+    return host === "127.0.0.1" || host === "localhost" || host === "::1";
+}
+
+async function loopbackPermission() {
+    if (!navigator.permissions || !navigator.permissions.query) return "unknown";
+    try {
+        const status = await navigator.permissions.query({ name: "loopback-network" });
+        return status.state;
+    } catch (error) {
+        return "unknown";
+    }
+}
+
+async function failureStatus() {
+    const where = `127.0.0.1:${currentPort()}`;
+    if (location.protocol === "file:") {
+        helperPause = true;
+        return `Can't reach the helper at ${where}. Open this page from https://manofneptune27.github.io/Multitool/ or from http://127.0.0.1. A file opened from the folder cannot talk to the helper.`;
+    }
+    if (pageIsLoopback()) {
+        helperPause = false;
+        return unreachableMessage();
+    }
+    const state = await loopbackPermission();
+    if (state === "denied") {
+        helperPause = true;
+        return `Can't reach the helper at ${where}. Chrome blocked apps on this device for this site. Click the lock icon in the address bar, set Apps on device to Allow, then click Check again.`;
+    }
+    if (state === "prompt") {
+        helperPause = true;
+        return `Can't reach the helper at ${where}. Click Check again, and when the browser asks to connect to apps on this device, choose Allow.`;
+    }
+    helperPause = false;
+    return unreachableMessage();
 }
 
 async function helperFetch(path, options) {
-    const init = Object.assign({ cache: "no-store", targetAddressSpace: "local" }, options || {});
+    const base = Object.assign({ cache: "no-store" }, options || {});
     try {
-        return await fetch(helperAddress(path), init);
+        return await fetch(helperAddress(path), Object.assign({ targetAddressSpace: "loopback" }, base));
     } catch (error) {
         const detail = String(error && error.message || "").toLowerCase();
         if (!detail.includes("targetaddressspace")) throw error;
-        return fetch(helperAddress(path), Object.assign({ cache: "no-store" }, options || {}));
+        return fetch(helperAddress(path), base);
     }
 }
 
@@ -222,6 +262,7 @@ function watchHelper() {
     if (helperWatch) return;
     helperWatch = setInterval(() => {
         if (document.querySelector("#tools").hidden) return;
+        if (helperPause) return;
         if (helperConnected) {
             helperQuietTicks += 1;
             if (helperQuietTicks < 8) return;
@@ -236,6 +277,8 @@ function stopHelperWatch() {
     if (helperWatch) clearInterval(helperWatch);
     helperWatch = 0;
     helperConnected = false;
+    helperPause = false;
+    helperChecking = false;
     helperQuietTicks = 0;
     document.removeEventListener("visibilitychange", checkWhenVisible);
 }
@@ -248,17 +291,21 @@ function checkWhenVisible() {
 }
 
 async function checkHelper() {
+    if (helperChecking) return;
+    helperChecking = true;
     const attempt = ++helperAttempt;
     try {
         const response = await helperFetch("/health");
         if (attempt !== helperAttempt) return;
         if (!response.ok) {
             helperConnected = false;
+            helperPause = false;
             setHelperStatus(await readError(response), true);
             return;
         }
         const data = await response.json();
         if (attempt !== helperAttempt) return;
+        helperPause = false;
         if (!data.ytdlp) {
             helperConnected = true;
             setHelperStatus("The helper is running, but yt-dlp is not installed. Run python3 -m pip install --user yt-dlp and check again.", true);
@@ -270,7 +317,11 @@ async function checkHelper() {
     } catch (error) {
         if (attempt !== helperAttempt) return;
         helperConnected = false;
-        setHelperStatus(unreachableMessage(), true);
+        const status = await failureStatus();
+        if (attempt !== helperAttempt) return;
+        setHelperStatus(status, true);
+    } finally {
+        helperChecking = false;
     }
 }
 

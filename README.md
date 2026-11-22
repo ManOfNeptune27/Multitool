@@ -41,7 +41,7 @@ helper/.venv/bin/pip install -r helper/requirements.txt
 python3 helper/server.py
 ```
 
-On this Windows PC, `helper/start-windows.bat` starts that helper when you sign in, and the page connects to it on its own. If the browser asks to look at your local network, choose Allow. You can also start it by hand with `py -3 helper/server.py` and leave that window open.
+On this Windows PC, `helper/start-windows.bat` starts that helper when you sign in, and the page connects to it on its own. Open the page from the GitHub address above, or from `http://127.0.0.1`. Opening the HTML file from the folder cannot reach the helper. If Chrome asks to connect to apps on this device, choose Allow. If it still cannot connect, click the lock icon in the address bar and set Apps on device to Allow. You can also start the helper by hand with `py -3 helper/server.py` and leave that window open.
 
 The helper listens only on 127.0.0.1. A saved video needs ffmpeg if the site splits picture and sound. `py -3 -m pip install --user imageio-ffmpeg` is a free copy the helper can find when you start it with that same Python. YouTube also needs a free JavaScript runtime such as Deno on your PATH.
 
