@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import traceback
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,7 +22,10 @@ DEFAULT_PORT = 8765
 MAX_BODY = 64 * 1024
 TIMEOUT_SECONDS = 30 * 60
 PAGE_ORIGIN = "https://manofneptune27.github.io"
+IDLE_SECONDS = 120
 YTDLP_LOCK = threading.Lock()
+TOUCH_LOCK = threading.Lock()
+LAST_TOUCH = time.monotonic()
 
 
 class Busy(Exception):
@@ -32,12 +36,18 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "MultitoolHelper/1.0"
 
     def log_message(self, fmt, *args):
-        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+        if sys.stderr is None:
+            return
+        try:
+            sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+        except Exception:
+            return
 
     def do_OPTIONS(self):
         if not self.origin_ok():
             self.send_json(403, {"error": "This helper only answers the Multitool page."})
             return
+        touch()
         self.send_response(204)
         self.send_cors()
         self.send_header("Content-Length", "0")
@@ -48,6 +58,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self.origin_ok():
                 self.send_json(403, {"error": "This helper only answers the Multitool page."})
                 return
+            touch()
             if urlparse(self.path).path != "/health":
                 self.send_json(404, {"error": "That page is not part of the helper."})
                 return
@@ -63,7 +74,11 @@ class Handler(BaseHTTPRequestHandler):
             if not self.origin_ok():
                 self.send_json(403, {"error": "This helper only answers the Multitool page."})
                 return
+            touch()
             path = urlparse(self.path).path
+            if path == "/shutdown":
+                self.close_helper()
+                return
             payload = self.read_json()
             if path == "/info":
                 self.send_json(200, video_info(payload.get("url", "")))
@@ -139,6 +154,44 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Private-Network-Access-Name", "multitool")
         self.send_header("Private-Network-Access-ID", "02:00:00:00:00:01")
+
+    def close_helper(self):
+        self.send_response(204)
+        self.send_cors()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+        threading.Thread(target=self.server.shutdown, daemon=True).start()
+
+
+def say(text):
+    if sys.stdout is None:
+        return
+    try:
+        print(text, flush=True)
+    except Exception:
+        return
+
+
+def touch():
+    global LAST_TOUCH
+    with TOUCH_LOCK:
+        LAST_TOUCH = time.monotonic()
+
+
+def seconds_idle():
+    with TOUCH_LOCK:
+        return time.monotonic() - LAST_TOUCH
+
+
+def watch_idle(server):
+    while True:
+        time.sleep(5)
+        if YTDLP_LOCK.locked():
+            continue
+        if seconds_idle() < IDLE_SECONDS:
+            continue
+        server.shutdown()
+        return
 
 
 def origin_allowed(origin):
@@ -471,6 +524,36 @@ def exercise_http():
             raise AssertionError("bad mode was accepted")
         except urllib.error.HTTPError as exc:
             assert exc.code in {400, 502}
+
+        blocked_stop = urllib.request.Request(
+            "http://127.0.0.1:%s/shutdown" % port,
+            data=b"",
+            headers={"Origin": "https://evil.example"},
+            method="POST",
+        )
+        try:
+            urllib.request.urlopen(blocked_stop, timeout=10)
+            raise AssertionError("evil shutdown was allowed")
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 403
+
+        stop = urllib.request.Request(
+            "http://127.0.0.1:%s/shutdown" % port,
+            data=b"",
+            headers={"Origin": PAGE_ORIGIN},
+            method="POST",
+        )
+        with urllib.request.urlopen(stop, timeout=10) as response:
+            assert response.status == 204
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            try:
+                urllib.request.urlopen("http://127.0.0.1:%s/health" % port, timeout=1)
+            except Exception:
+                break
+            time.sleep(0.1)
+        else:
+            raise AssertionError("helper stayed up after shutdown")
     finally:
         server.shutdown()
         server.server_close()
@@ -491,12 +574,14 @@ def main(argv):
         print("Port must be from 1 to 65535.", file=sys.stderr)
         return 1
     server = ThreadingHTTPServer((HOST, port), Handler)
-    print("Multitool helper listening on http://%s:%s" % (HOST, port), flush=True)
-    print("Leave this window open while you use the site.", flush=True)
+    touch()
+    threading.Thread(target=watch_idle, args=(server,), daemon=True).start()
+    say("Multitool helper listening on http://%s:%s" % (HOST, port))
+    say("It closes when you lock the page, or about two minutes after you leave.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nStopped.", flush=True)
+        say("Stopped.")
     finally:
         server.server_close()
     return 0

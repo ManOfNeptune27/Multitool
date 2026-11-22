@@ -160,6 +160,7 @@ function setupGate() {
     });
 
     document.querySelector("#lock").addEventListener("click", () => {
+        helperFetch("/shutdown", { method: "POST", keepalive: true }).catch(() => {});
         sessionStorage.removeItem(SESSION_KEY);
         stopHelperWatch();
         firstPassword = true;

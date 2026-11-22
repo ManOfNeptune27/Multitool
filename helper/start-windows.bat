@@ -12,4 +12,4 @@ goto waitpath
 :ready
 py -3 -c "import socket;s=socket.socket();r=s.connect_ex(('127.0.0.1',8765));s.close();raise SystemExit(0 if r==0 else 1)"
 if %ERRORLEVEL%==0 exit /b 0
-start "Multitool helper" /min py -3 "%ROOT%\helper\server.py"
+start "" pyw -3 "%ROOT%\helper\server.py"
