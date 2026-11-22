@@ -207,6 +207,14 @@ async function loopbackPermission() {
     }
 }
 
+function promptMessage() {
+    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Click Check again, and when the browser asks to connect to apps on this device, choose Allow.`;
+}
+
+function deniedMessage() {
+    return `Can't reach the helper at 127.0.0.1:${currentPort()}. Chrome blocked apps on this device for this site. Click the lock icon in the address bar, set Apps on device to Allow, then click Check again.`;
+}
+
 async function failureStatus() {
     const where = `127.0.0.1:${currentPort()}`;
     if (location.protocol === "file:") {
@@ -220,11 +228,11 @@ async function failureStatus() {
     const state = await loopbackPermission();
     if (state === "denied") {
         helperPause = true;
-        return `Can't reach the helper at ${where}. Chrome blocked apps on this device for this site. Click the lock icon in the address bar, set Apps on device to Allow, then click Check again.`;
+        return deniedMessage();
     }
     if (state === "prompt") {
         helperPause = true;
-        return `Can't reach the helper at ${where}. Click Check again, and when the browser asks to connect to apps on this device, choose Allow.`;
+        return promptMessage();
     }
     helperPause = false;
     return unreachableMessage();
@@ -292,9 +300,20 @@ function checkWhenVisible() {
 
 async function checkHelper() {
     if (helperChecking) return;
+    const gesture = !!(navigator.userActivation && navigator.userActivation.isActive);
     helperChecking = true;
     const attempt = ++helperAttempt;
     try {
+        if (!gesture && !pageIsLoopback() && location.protocol !== "file:") {
+            const state = await loopbackPermission();
+            if (attempt !== helperAttempt) return;
+            if (state === "prompt" || state === "denied") {
+                helperConnected = false;
+                helperPause = true;
+                setHelperStatus(state === "denied" ? deniedMessage() : promptMessage(), true);
+                return;
+            }
+        }
         const response = await helperFetch("/health");
         if (attempt !== helperAttempt) return;
         if (!response.ok) {
