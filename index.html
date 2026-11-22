@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <title>Multitool</title>
+</head>
+<body>
+    <ul id="snow" aria-hidden="true"></ul>
+    <main>
+        <div class="main-title">
+            <h1>Multitool</h1>
+            <h6>Conner Brunner</h6>
+        </div>
+
+        <section id="gate">
+            <article>
+                <h2>Locked</h2>
+                <p>Enter the password to use this page.</p>
+                <form id="lock-form" onsubmit="return false">
+                    <label for="password">Password</label>
+                    <div class="row">
+                        <input id="password" type="password" autocomplete="current-password" required>
+                        <button type="submit">Unlock</button>
+                    </div>
+                    <p id="lock-message" class="error" role="alert"></p>
+                </form>
+            </article>
+        </section>
+
+        <section id="tools" hidden>
+            <p class="session"><button type="button" id="lock">Lock</button></p>
+
+            <article>
+                <h2>Save a video</h2>
+                <p>Paste a public link from YouTube, Instagram, X, Bluesky, or another site yt-dlp supports.</p>
+                <p id="helper-status" class="status" role="status"></p>
+                <form id="lookup-form" onsubmit="return false">
+                    <label for="video-url">Link</label>
+                    <div class="row">
+                        <input id="video-url" type="url" inputmode="url" placeholder="https://" autocomplete="off" spellcheck="false" required>
+                        <button type="submit" id="lookup">Look up</button>
+                    </div>
+                </form>
+                <div id="video-result"></div>
+                <div class="row port-row">
+                    <label for="port">Helper port</label>
+                    <input id="port" name="port" type="number" min="1" max="65535" value="8765">
+                    <button type="button" id="recheck">Check again</button>
+                </div>
+            </article>
+
+            <article>
+                <h2>QR code</h2>
+                <p>The code is drawn in this browser. The text is not sent anywhere.</p>
+                <form id="qr-form" onsubmit="return false">
+                    <label for="qr-text">Text or link</label>
+                    <textarea id="qr-text" name="text" rows="4" maxlength="2000" spellcheck="false"></textarea>
+                    <div class="row">
+                        <button type="submit" id="save-qr" disabled>Save PNG</button>
+                    </div>
+                </form>
+                <p id="qr-message" class="error" role="status"></p>
+                <canvas id="qr-canvas" hidden></canvas>
+            </article>
+        </section>
+    </main>
+    <script src="qrcodegen.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

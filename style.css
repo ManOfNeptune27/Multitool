@@ -1,0 +1,221 @@
+:root {
+    --navy: #00101f;
+    --panel: #061c33;
+    --electric-blue: #1268ff;
+    --ice-blue: #8fd8ff;
+    --snow-white: #eaf6ff;
+}
+
+* , *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--navy);
+    color: var(--snow-white);
+    font-family: system-ui;
+    background-image: linear-gradient(to right, var(--electric-blue) 0 100px, var(--navy) 100px calc(100% - 100px), var(--electric-blue) calc(100% - 100px));
+    margin: 0;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 0;
+}
+
+h6 {
+    text-align: center;
+    margin-top: 0;
+}
+
+.main-title {
+    background-image: linear-gradient(to bottom, var(--panel), #0b3470);
+    color: var(--snow-white);
+    padding: 8px 10px;
+    width: 320px;
+    margin-bottom: 20px;
+    margin-inline: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--electric-blue);
+    border: 2px solid var(--ice-blue);
+}
+
+article {
+    background-color: var(--panel);
+    color: var(--snow-white);
+    padding: 16px;
+    border-radius: 8px;
+    max-width: 55rem;
+    margin: 0 auto 14px;
+    border: 2px solid var(--electric-blue);
+    box-shadow: 0 2px 8px #000000;
+}
+
+article h2,
+article h3 {
+    margin-top: 0;
+}
+
+label {
+    display: block;
+    margin: 12px 0 6px;
+}
+
+.port-row label {
+    margin: 0;
+}
+
+input, textarea, button {
+    font: inherit;
+    color: var(--snow-white);
+    background-color: var(--navy);
+    border: 2px solid var(--electric-blue);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
+textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+button {
+    background-image: linear-gradient(to bottom, var(--panel), #0b3470);
+    cursor: pointer;
+}
+
+button:hover {
+    border-color: var(--ice-blue);
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+input:focus, textarea:focus, button:focus-visible {
+    outline: 2px solid var(--ice-blue);
+    outline-offset: 2px;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.row input[type="url"],
+.row input[type="password"] {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+#port {
+    width: 6rem;
+}
+
+.port-row {
+    margin-top: 16px;
+}
+
+.session {
+    max-width: 55rem;
+    margin: 0 auto 14px;
+    text-align: right;
+}
+
+.status {
+    color: var(--ice-blue);
+    min-height: 1.2em;
+}
+
+.error {
+    color: #ffb4b4;
+    min-height: 1.2em;
+}
+
+.meta {
+    color: var(--ice-blue);
+}
+
+.thumb {
+    display: block;
+    max-width: 240px;
+    margin: 12px 0;
+    border-radius: 8px;
+    border: 2px solid var(--electric-blue);
+}
+
+#qr-canvas {
+    display: block;
+    margin-top: 14px;
+    max-width: 100%;
+    height: auto;
+    background: #ffffff;
+    border-radius: 8px;
+}
+
+#snow {
+    position: fixed;
+    inset: 0 150px;
+    z-index: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    pointer-events: none;
+    list-style: none;
+}
+
+main {
+    position: relative;
+    z-index: 1;
+    padding: 16px 0 40px;
+}
+
+#snow li {
+    position: absolute;
+    top: -12px;
+    display: block;
+    border-radius: 50%;
+    background-color: var(--ice-blue);
+    opacity: 0.95;
+    animation:
+        snowfall var(--fall-duration) linear var(--fall-delay) infinite,
+        sway var(--sway-duration) ease-in-out var(--sway-delay) infinite alternate;
+}
+
+#snow li:nth-child(7n + 2) { background-color: var(--snow-white); }
+#snow li:nth-child(7n + 3) { background-color: var(--ice-blue); }
+#snow li:nth-child(7n + 4) { background-color: var(--electric-blue); }
+#snow li:nth-child(7n + 5) { background-color: var(--snow-white); }
+#snow li:nth-child(7n + 6) { background-color: var(--ice-blue); }
+#snow li:nth-child(7n + 7) { background-color: var(--snow-white); }
+
+@keyframes sway {
+    from { translate: var(--sway-left) 0; }
+    to { translate: var(--sway-right) 0; }
+}
+
+@keyframes snowfall {
+    to { transform: translate(var(--fall-drift), calc(100vh + 24px)); }
+}
+
+@media (max-width: 720px) {
+    body {
+        background-image: linear-gradient(to right, var(--electric-blue) 0 16px, var(--navy) 16px calc(100% - 16px), var(--electric-blue) calc(100% - 16px));
+    }
+
+    #snow {
+        inset: 0 24px;
+    }
+
+    .main-title {
+        width: auto;
+        margin-inline: 12px;
+    }
+
+    article, .session {
+        margin-inline: 8px;
+    }
+}
