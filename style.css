@@ -1,9 +1,9 @@
 :root {
-    --navy: #00101f;
-    --panel: #061c33;
-    --electric-blue: #1268ff;
-    --ice-blue: #8fd8ff;
-    --snow-white: #eaf6ff;
+    --navy: #021208;
+    --panel: #0a2c1a;
+    --electric-blue: #00c878;
+    --ice-blue: #b6ffd6;
+    --snow-white: #f4fff8;
 }
 
 * , *::before, *::after {
@@ -29,7 +29,7 @@ h6 {
 }
 
 .main-title {
-    background-image: linear-gradient(to bottom, var(--panel), #0b3470);
+    background-image: linear-gradient(to bottom, var(--panel), #0f7a46);
     color: var(--snow-white);
     padding: 8px 10px;
     width: 320px;
@@ -80,7 +80,7 @@ textarea {
 }
 
 button {
-    background-image: linear-gradient(to bottom, var(--panel), #0b3470);
+    background-image: linear-gradient(to bottom, var(--panel), #0f7a46);
     cursor: pointer;
 }
 

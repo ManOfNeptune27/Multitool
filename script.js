@@ -589,7 +589,7 @@ function drawQr(text) {
     const context = canvas.getContext("2d");
     for (let y = -border; y < qr.size + border; y += 1) {
         for (let x = -border; x < qr.size + border; x += 1) {
-            context.fillStyle = qr.getModule(x, y) ? "#00101f" : "#ffffff";
+            context.fillStyle = qr.getModule(x, y) ? "#021208" : "#ffffff";
             context.fillRect((x + border) * scale, (y + border) * scale, scale, scale);
         }
     }
